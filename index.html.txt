@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>naija.launch — Coin Launchpad & Admin Portal</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.17.0/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0e13;
+      --surface: #12161f;
+      --surface-2: #171c27;
+      --surface-3: #1e2533;
+      --border: #222938;
+      --lime: #d4ff59;
+      --lime-text: #0b0e13;
+      --text: #f3f5f8;
+      --muted: #7f8899;
+      --danger: #ff5f5f;
+      --gold: #f5b942;
+      --purple-card: linear-gradient(135deg, #1d172b 0%, #151924 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 44px; overflow-x: hidden; }
+    .container { max-width: 480px; margin: 0 auto; padding: 14px 16px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+    .hidden { display: none !important; }
+
+    /* TOP HEADER */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 14px; border-bottom: 1px solid var(--border); gap: 8px;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+    .brand-icon {
+      width: 34px; height: 34px; border-radius: 10px; background: var(--lime);
+      color: var(--lime-text); font-weight: 900; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-name { font-size: 1.16rem; font-weight: 800; letter-spacing: -0.02em; }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-launch-pill {
+      background: var(--lime); color: var(--lime-text); border: none;
+      padding: 8px 12px; border-radius: 10px; font-size: 0.76rem; font-weight: 800;
+      cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap;
+    }
+    .avatar-circle {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--lime); color: var(--lime-text);
+      border: none; font-weight: 900; font-size: 0.82rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .menu-btn {
+      width: 34px; height: 34px; border-radius: 10px; background: var(--surface);
+      border: 1px solid var(--border); color: var(--text); font-size: 1rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* WALLET BAR */
+    .wallet-bar {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; margin-top: 14px;
+    }
+    .wb-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .curr-tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 3px; gap: 2px; }
+    .curr-tab {
+      background: transparent; border: none; color: var(--muted); font-size: 0.7rem; font-weight: 700;
+      padding: 5px 9px; border-radius: 7px; cursor: pointer;
+    }
+    .curr-tab.active { background: var(--surface-3); color: var(--text); }
+    .bal-right { text-align: right; }
+    .bal-lbl { font-size: 0.68rem; color: var(--muted); }
+    .bal-main { font-size: 0.98rem; font-weight: 800; color: var(--text); margin-top: 2px; }
+    .bal-sub { font-size: 0.7rem; color: var(--muted); }
+    .wb-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .btn-mini-dark {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+      padding: 8px 6px; border-radius: 9px; font-size: 0.72rem; font-weight: 700; cursor: pointer; text-align: center;
+    }
+    .btn-mini-lime {
+      background: var(--lime); border: none; color: var(--lime-text);
+      padding: 8px 6px; border-radius: 9px; font-size: 0.72rem; font-weight: 800; cursor: pointer; text-align: center;
+    }
+
+    /* HERO */
+    .hero { margin-top: 18px; }
+    .kicker { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+    .hero-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 5px; }
+    .hero-head h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+    .coin-counter { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+    .coin-counter span { color: var(--lime); font-weight: 800; }
+
+    .section-row { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 10px; font-size: 0.78rem; }
+    .section-row strong { display: flex; align-items: center; gap: 5px; }
+    .section-row span { color: var(--muted); font-size: 0.72rem; }
+
+    /* FEATURED 2x2 GRID (from screenshot 168185) */
+    .featured-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .feat-card {
+      background: var(--purple-card); border: 1px solid #2b2640; border-radius: 12px;
+      padding: 10px; cursor: pointer; position: relative;
+    }
+    .feat-rank { font-size: 0.64rem; color: var(--muted); font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .feat-top { display: flex; align-items: center; gap: 8px; }
+    .tok-avatar {
+      width: 34px; height: 34px; border-radius: 9px; background: var(--surface-3);
+      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.82rem; color: var(--lime); flex-shrink: 0;
+    }
+    .feat-name { font-size: 0.82rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feat-tick { font-size: 0.68rem; color: var(--lime); font-weight: 700; }
+    .feat-creator { font-size: 0.64rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feat-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.68rem; font-weight: 700; }
+    .badge-sim { color: #9aa4b8; font-size: 0.62rem; }
+    .badge-boost { color: var(--gold); font-size: 0.62rem; }
+
+    /* SEARCH & FILTER PILLS */
+    .search-wrap { position: relative; margin-bottom: 10px; }
+    .search-wrap input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 11px;
+      padding: 11px 12px 11px 36px; color: var(--text); font-size: 0.82rem; outline: none;
+    }
+    .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .filter-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 12px; }
+    .f-pill {
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      padding: 9px 5px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .f-pill.active { background: var(--lime); color: var(--lime-text); border-color: var(--lime); }
+
+    /* TOKEN FEED LIST (from screenshot 168185) */
+    .feed-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; min-height: 130px; }
+    .empty-msg { height: 106px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+    .tok-row {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 11px; margin-bottom: 8px; cursor: pointer;
+    }
+    .tok-row.highlight { background: var(--purple-card); border-color: #2f2947; }
+    .tok-row:last-child { margin-bottom: 0; }
+    .tr-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .tr-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .tr-rank { font-size: 0.68rem; color: var(--muted); font-weight: 700; width: 14px; text-align: center; }
+    .tr-title { font-size: 0.86rem; font-weight: 800; }
+    .tr-title span { color: var(--lime); font-size: 0.74rem; margin-left: 4px; }
+    .tr-meta { font-size: 0.66rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tr-mc { text-align: right; font-size: 0.82rem; font-weight: 800; color: var(--lime); white-space: nowrap; }
+    .curve-bar { background: var(--bg); height: 5px; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+    .curve-fill { background: var(--lime); height: 100%; width: 0%; transition: width 0.25s; }
+
+    /* TRADE SCREEN (from screenshots 168180, 168181, 168182, 168183) */
+    .sim-banner {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 12px; margin-top: 12px; font-size: 0.7rem; color: var(--muted);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .sim-banner strong { color: var(--lime); }
+
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px; margin-top: 10px;
+    }
+    .chart-top-lbl { font-size: 0.72rem; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .live-dot { color: var(--lime); font-weight: 700; }
+    .price-big { font-size: 1.45rem; font-weight: 900; margin-top: 4px; letter-spacing: -0.02em; }
+    .tf-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.7rem; color: var(--muted); }
+    .tf-btns { display: flex; gap: 6px; }
+    .tf-btn {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+      padding: 4px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 700; cursor: pointer;
+    }
+    .tf-btn.active { background: var(--surface-3); color: var(--lime); border-color: rgba(212,255,89,0.35); }
+    canvas.price-canvas {
+      width: 100%; height: 185px; background: #0d1118; border: 1px solid var(--border);
+      border-radius: 10px; margin-top: 10px; display: block;
+    }
+
+    .recent-trades-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px 14px; margin-top: 10px;
+    }
+    .rt-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.72rem;
+    }
+    .rt-row:last-child { border-bottom: none; }
+    .side-buy { color: var(--lime); font-weight: 800; font-size: 0.68rem; }
+    .side-sell { color: var(--danger); font-weight: 800; font-size: 0.68rem; }
+
+    .trade-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-top: 10px; }
+    .trade-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .trade-head h2 { font-size: 1rem; font-weight: 800; }
+    .bs-switch { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+    .bs-btn {
+      padding: 9px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 800;
+      cursor: pointer; background: transparent; color: var(--muted);
+    }
+    .bs-btn.buy-active { background: var(--lime); color: var(--lime-text); }
+    .bs-btn.sell-active { background: var(--danger); color: #fff; }
+    .amt-label-row { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; }
+    .amt-input-box {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 10px 12px;
+    }
+    .amt-input-box input {
+      background: transparent; border: none; color: var(--text); font-size: 1.05rem; font-weight: 800; width: 70%; outline: none;
+    }
+    .amt-unit { font-size: 0.8rem; font-weight: 800; color: var(--muted); }
+    .preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .preset-btn {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+      padding: 7px 4px; border-radius: 8px; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+    }
+    .slip-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; font-size: 0.74rem; color: var(--muted); }
+    .slip-pills { display: flex; gap: 5px; }
+    .slip-pill {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+      padding: 5px 9px; border-radius: 7px; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+    }
+    .slip-pill.active { background: var(--lime); color: var(--lime-text); border-color: var(--lime); }
+    .fee-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; margin-bottom: 12px; font-size: 0.76rem; }
+    .fee-line { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .fee-note { font-size: 0.68rem; color: var(--muted); line-height: 1.4; margin-top: 6px; }
+    .pos-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; margin-top: 12px; }
+    .pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 0.76rem; }
+    .curve-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-top: 10px; }
+    .holders-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-top: 10px; }
+    .h-row { margin-top: 8px; font-size: 0.74rem; }
+    .h-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .h-bar-bg { background: var(--bg); height: 6px; border-radius: 999px; overflow: hidden; }
+    .h-bar-fill { background: var(--lime); height: 100%; }
+    .rate-foot { margin-top: 12px; font-size: 0.68rem; color: var(--muted); line-height: 1.5; }
+    .refresh-link { color: var(--text); text-decoration: underline; cursor: pointer; font-weight: 700; }
+
+    /* DRAWER MENU (from screenshots 168186 & 168184) */
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(4,6,10,0.82); z-index: 60;
+      display: none; justify-content: flex-end;
+    }
+    .drawer-backdrop.open { display: flex; }
+    .drawer {
+      width: 88%; max-width: 365px; background: var(--surface); height: 100%;
+      border-left: 1px solid var(--border); padding: 16px; overflow-y: auto;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .drawer-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .d-sec-lbl { font-size: 0.7rem; color: var(--muted); margin: 13px 0 6px; font-weight: 700; }
+    .curr-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .curr-choice {
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      padding: 9px; border-radius: 9px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+    }
+    .curr-choice.active { background: var(--surface-3); color: var(--text); border-color: #364156; }
+    .wallet-box-d { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
+    .action-item {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 12px; border-radius: 10px; font-size: 0.78rem; font-weight: 700;
+      display: flex; align-items: center; gap: 9px; cursor: pointer; margin-bottom: 7px; text-align: left;
+    }
+    .vip-card {
+      background: rgba(212,255,89,0.08); border: 1px solid rgba(212,255,89,0.28);
+      border-radius: 11px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    }
+    .ref-box { background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 10px; }
+    .ref-link-row { display: flex; gap: 6px; align-items: center; }
+    .ref-link-txt {
+      flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 8px; font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-claim-ref {
+      width: 100%; margin-top: 8px; background: #4c592d; color: var(--lime); border: 1px solid rgba(212,255,89,0.28);
+      border-radius: 9px; padding: 9px; font-size: 0.76rem; font-weight: 800; cursor: pointer;
+    }
+    .btn-claim-ref.ready { background: var(--lime); color: var(--lime-text); }
+
+    /* MODALS */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(4,6,10,0.86); z-index: 70;
+      display: none; align-items: flex-end; justify-content: center; padding: 10px;
+    }
+    .modal-bg.open { display: flex; }
+    .modal-card {
+      width: 100%; max-width: 450px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 16px; max-height: 92vh; overflow-y: auto;
+    }
+    .m-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .m-head h3 { font-size: 0.96rem; font-weight: 800; }
+    .x-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+    .inner-panel { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .b-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 8px; font-size: 0.78rem; }
+    .b-row:last-child { border-bottom: none; }
+    .copy-tag { background: var(--surface-3); border: 1px solid var(--border); color: var(--text); padding: 5px 9px; border-radius: 7px; font-size: 0.7rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .f-lbl { display: block; font-size: 0.74rem; font-weight: 700; color: #cbd5e1; margin: 10px 0 5px; }
+    .f-inp {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 11px 12px; color: var(--text); font-size: 0.84rem; outline: none;
+    }
+    .f-inp:focus { border-color: var(--lime); }
+    .btn-lime-big {
+      width: 100%; background: var(--lime); color: var(--lime-text); border: none; border-radius: 11px;
+      padding: 13px; font-size: 0.86rem; font-weight: 800; cursor: pointer; margin-top: 12px;
+    }
+    .btn-dark-big {
+      width: 100%; background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 11px; padding: 11px; font-size: 0.82rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+    }
+
+    .footer {
+      margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+      font-size: 0.66rem; color: var(--muted);
+    }
+    .toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: #1b2230; color: var(--text); border: 1px solid var(--lime);
+      padding: 9px 14px; border-radius: 10px; font-size: 0.78rem; z-index: 99; display: none; max-width: 90vw;
+    }
+  
+    .vault-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(212, 255, 89, 0.1); border: 1px solid rgba(212, 255, 89, 0.28);
+      color: var(--lime); padding: 4px 8px; border-radius: 7px; font-size: 0.66rem; font-weight: 700;
+    }
+    .pnl-pill {
+      display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;
+    }
+    .pnl-pos { background: rgba(212, 255, 89, 0.14); color: var(--lime); }
+    .pnl-neg { background: rgba(255, 95, 95, 0.14); color: var(--danger); }
+    .vault-lock-box {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px; margin-bottom: 12px;
+    }
+    .vault-coin-card {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 11px; margin-bottom: 10px;
+    }
+    .key-box {
+      background: #090c10; border: 1px dashed rgba(212, 255, 89, 0.45);
+      border-radius: 8px; padding: 8px; font-size: 0.68rem; color: var(--lime);
+      margin-top: 6px;
+    }
+    .btn-warn {
+      background: rgba(255, 95, 95, 0.16); color: var(--danger); border: 1px solid rgba(255, 95, 95, 0.4);
+      border-radius: 9px; padding: 7px 10px; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- TOP HEADER -->
+    <header class="topbar">
+      <div class="brand" onclick="showExploreView()">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-name">naija.launch</div>
+      </div>
+      <div class="top-actions">
+        <button class="btn-launch-pill" id="topLaunchBtn" onclick="openLaunch()">🚀 Launch Coin (₦500)</button>
+        <button class="avatar-circle" id="topAvatarBtn" onclick="openAuthModal()">A</button>
+        <button class="menu-btn" onclick="openDrawer()">☰</button>
+      </div>
+    </header>
+
+    <!-- WALLET QUICK BAR -->
+    <div class="wallet-bar">
+      <div class="wb-top">
+        <div class="curr-tabs">
+          <button class="curr-tab active" data-curr="NGN" onclick="setDisplayCurrency('NGN')">NGN</button>
+          <button class="curr-tab" data-curr="USD" onclick="setDisplayCurrency('USD')">USD</button>
+          <button class="curr-tab" data-curr="ETH" onclick="setDisplayCurrency('ETH')">ETH</button>
+        </div>
+        <div class="bal-right">
+          <div class="bal-lbl">Web3 Wallet</div>
+          <div class="bal-main" id="wbMainBal">₦0.00</div>
+          <div class="bal-sub" id="wbSubBal">0.000000 ETH</div>
+        </div>
+      </div>
+      <div class="wb-btns">
+        <button class="btn-mini-dark" onclick="openDeposit()">🏛 Deposit NGN</button>
+        <button class="btn-mini-dark" onclick="openWithdraw()">↗ Withdraw ETH</button>
+        <button class="btn-mini-lime" onclick="openLaunch()">⚡ Launch Coin</button>
+      </div>
+    </div>
+
+    <!-- VIEW 1: EXPLORE / DISCOVERY -->
+    <main id="exploreView">
+      <section class="hero">
+        <div class="kicker">THE NEXT BIG THING STARTS HERE</div>
+        <div class="hero-head">
+          <h1>Find your next moonshot.</h1>
+          <div class="coin-counter">⚡ <span id="totalCoinsCount">0</span> coins launched</div>
+        </div>
+
+        <div class="section-row">
+          <strong><span style="color:var(--lime);">🔥</span> Trending on Naija Launch</strong>
+          <span>Featured launches</span>
+        </div>
+
+        <div class="featured-grid" id="featuredGrid"></div>
+
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input type="text" id="searchBox" placeholder="Search by name, ticker, or contract address..." oninput="renderExplore()" />
+        </div>
+
+        <div class="filter-pills">
+          <button class="f-pill active" data-f="trending" onclick="setExploreFilter('trending', this)">🔥 Trending</button>
+          <button class="f-pill" data-f="new" onclick="setExploreFilter('new', this)">✨ New Launches</button>
+          <button class="f-pill" data-f="mc" onclick="setExploreFilter('mc', this)">📈 Top Market Cap</button>
+        </div>
+
+        <div class="feed-box" id="tokensFeed">
+          <div class="empty-msg">No tokens match this filter.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- VIEW 2: TOKEN TRADE SCREEN (Chart + Recent Trades + Buy/Sell + Position + Curve + Holders) -->
+    <main id="tradeView" class="hidden">
+      <div class="sim-banner">
+        <span><strong>Naira UI · ETH Curve</strong> — Prices shown in ₦, backed by ETH math.</span>
+        <button class="copy-tag" onclick="showExploreView()">← Back</button>
+      </div>
+
+      <!-- LIVE PRICE CHART CARD (from screenshot 168183) -->
+      <div class="chart-card">
+        <div class="chart-top-lbl">
+          <span>Token price <span class="live-dot">• LIVE CURVE</span></span>
+          <span class="mono" style="font-size:0.68rem;" id="tCaLabel">0x...</span>
+        </div>
+        <div class="price-big" id="tPriceNgn">₦0.00</div>
+        <div style="font-size:0.7rem; color:var(--muted);" id="tPriceEth">≈ 0.00000000 ETH</div>
+
+        <div class="tf-bar">
+          <div class="tf-btns">
+            <button class="tf-btn" onclick="setTimeframe('1H', this)">1H</button>
+            <button class="tf-btn" onclick="setTimeframe('6H', this)">6H</button>
+            <button class="tf-btn" onclick="setTimeframe('24H', this)">24H</button>
+            <button class="tf-btn active" onclick="setTimeframe('ALL', this)">ALL</button>
+          </div>
+          <span>Price / NGN</span>
+        </div>
+
+        <canvas class="price-canvas" id="priceCanvas" width="420" height="185"></canvas>
+        <div style="display:flex; justify-content:space-between; font-size:0.66rem; color:var(--muted); margin-top:8px;">
+          <span>⚡ Updated on every trade</span>
+          <span>naija.launch charts</span>
+        </div>
+      </div>
+
+      <!-- BUY / SELL TRADE CARD (from screenshots 168180, 168181, 168182) -->
+      <div class="trade-card">
+        <div class="trade-head">
+          <h2 id="tradeTitle">Trade TOKEN</h2>
+          <span style="font-size:0.7rem; color:var(--muted);" id="tradeTickerBadge">$TKN</span>
+        </div>
+
+        <div class="bs-switch">
+          <button class="bs-btn buy-active" id="btnModeBuy" onclick="setTradeSide('buy')">Buy</button>
+          <button class="bs-btn" id="btnModeSell" onclick="setTradeSide('sell')">Sell</button>
+        </div>
+
+        <div class="amt-label-row">
+          <span id="tradeAmtLbl">Purchase amount</span>
+          <span>Main wallet: <strong id="tradeWalletBal" style="color:var(--text);">₦0</strong></span>
+        </div>
+
+        <div class="amt-input-box">
+          <input type="number" id="tradeAmountInput" placeholder="1000" min="1" oninput="updateTradeQuote()" />
+          <span class="amt-unit" id="tradeInputUnit">NGN</span>
+        </div>
+
+        <div class="preset-grid" id="presetGrid">
+          <button class="preset-btn" onclick="setTradePreset(1000)">₦1,000</button>
+          <button class="preset-btn" onclick="setTradePreset(5000)">₦5,000</button>
+          <button class="preset-btn" onclick="setTradePreset(20000)">₦20,000</button>
+          <button class="preset-btn" onclick="setTradePreset('max')">Max</button>
+        </div>
+
+        <div class="slip-row">
+          <span>Slippage</span>
+          <div class="slip-pills">
+            <button class="slip-pill" onclick="setSlippage(0.5, this)">0.5%</button>
+            <button class="slip-pill active" onclick="setSlippage(1, this)">1%</button>
+            <button class="slip-pill" onclick="setSlippage(3, this)">3%</button>
+          </div>
+        </div>
+
+        <div class="fee-box">
+          <div class="fee-line">
+            <span style="color:var(--muted);">Platform fee (5%)</span>
+            <strong id="qFeeNgn">₦0</strong>
+          </div>
+          <div style="font-size:0.7rem; color:var(--muted); margin-bottom:6px;" id="qFeeEth">≈ 0.00000000 ETH</div>
+          <div class="fee-line">
+            <span id="qTotalLbl">Purchase + 5% fee</span>
+            <strong id="qTotalNgn">₦0</strong>
+          </div>
+          <div class="fee-line" style="margin-top:4px;">
+            <span style="color:var(--muted);">Est. Output</span>
+            <strong style="color:var(--lime);" id="qEstOut">0 TOKENS</strong>
+          </div>
+          <div class="fee-note">
+            5% platform fee is included in execution. MAX sells your full holding with the 5% fee auto-deducted from proceeds.
+          </div>
+        </div>
+
+        <button class="btn-lime-big" id="btnExecuteTrade" onclick="executeTrade()">Buy TOKEN</button>
+
+        <!-- POSITION & PnL CARD (from screenshot 168182) -->
+        <div class="pos-box">
+          <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.7rem; color:var(--muted);">Your position</span><span class="pnl-pill pnl-pos" id="posGainPct">0.0%</span></div>
+          <div style="font-size:0.96rem; font-weight:800; margin-top:2px;" id="userTokenPos">0 TOKEN</div>
+          <div class="pos-grid">
+            <div>
+              <div style="font-size:0.66rem; color:var(--muted);">Avg buy price</div>
+              <strong id="posAvgPrice">₦0.00</strong>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.66rem; color:var(--muted);">Current value</div>
+              <strong id="posCurVal">₦0</strong>
+            </div>
+            <div>
+              <div style="font-size:0.66rem; color:var(--muted);">PnL</div>
+              <strong id="posPnl" style="color:var(--lime);">₦0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+
+
+      <!-- COIN INTERNAL WALLET ADDRESS CARD -->
+      <div class="curve-box" id="coinVaultPublicCard">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:0.8rem;">🪙 Coin Internal Wallet</strong>
+          <span class="vault-badge">COIN LEDGER WALLET</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; background:var(--surface-2); padding:8px 10px; border-radius:9px; border:1px solid var(--border);">
+          <span class="mono" style="font-size:0.7rem;" id="tVaultAddr">0x...</span>
+          <button class="copy-tag" onclick="copyText('tVaultAddr', 'Coin internal wallet copied')">⧉ Copy</button>
+        </div>
+        <div style="font-size:0.68rem; color:var(--muted); margin-top:6px;">
+          Buys go to this coin's internal wallet; sells settle from this coin's ledger with your % gain/loss back to your balance.
+        </div>
+      </div>
+
+      <!-- BONDING CURVE PROGRESS CARD (from screenshot 168182) -->
+      <div class="curve-box">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:700;">
+          <span>🚀 Bonding curve</span>
+          <span style="color:var(--lime);" id="tradeCurvePct">0.0%</span>
+        </div>
+        <div class="curve-bar" style="height:8px; margin:9px 0;">
+          <div class="curve-fill" id="tradeCurveBar"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--muted);">
+          <span id="curveMcText">₦250,000</span>
+          <span id="curveTargetText">₦2,500,000 target</span>
+        </div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:6px;" id="tradeCurveSub">₦2,250,000 needed to graduate</div>
+        <div style="font-size:0.68rem; color:var(--muted); margin-top:6px; line-height:1.4;">
+          At graduation target, the bonding curve reaches 100%. Fixed 1,000,000 supply · Naira display · ETH backing.
+        </div>
+      </div>
+
+      <!-- TOP HOLDERS CARD (from screenshot 168182) -->
+      <div class="holders-card">
+        <div style="font-size:0.8rem; font-weight:800;">👥 Top Holders</div>
+        <div id="topHoldersList"></div>
+        <div class="rate-foot">
+          <div>Live 1 ETH ≈ <strong id="footEthRate">₦2,432,820.00</strong> · 1 USD ≈ <strong id="footUsdRate">₦1,600.00</strong> · <span class="refresh-link" onclick="refreshRateDisplay()">Refresh rate</span></div>
+          <div id="rateCheckedTime" style="margin-top:2px;">Rate synced · Naira-denominated trading</div>
+        </div>
+      </div>
+
+      <!-- RECENT TRADES CARD (from screenshot 168183) -->
+      <div class="recent-trades-card">
+        <div style="font-size:0.8rem; font-weight:800; margin-bottom:6px;">Recent Trades</div>
+        <div id="recentTradesList">
+          <div style="font-size:0.72rem; color:var(--muted);">No trades recorded for this token yet.</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <span>naija.launch · Explore. Launch.</span>
+      <span>Naira UI · ETH Curve · 5% platform fee</span>
+    </footer>
+  </div>
+
+  <!-- SIDE MENU DRAWER (from screenshots 168186 & 168184) -->
+  <div class="drawer-backdrop" id="drawerBg" onclick="if(event.target===this) closeDrawer()">
+    <aside class="drawer">
+      <div>
+        <div class="drawer-head">
+          <strong>Menu</strong>
+          <button class="x-btn" onclick="closeDrawer()">✕</button>
+        </div>
+
+        <div class="d-sec-lbl">Currency</div>
+        <div class="curr-grid-3">
+          <button class="curr-choice active" data-curr="NGN" onclick="setDisplayCurrency('NGN')">NGN</button>
+          <button class="curr-choice" data-curr="USD" onclick="setDisplayCurrency('USD')">USD</button>
+          <button class="curr-choice" data-curr="ETH" onclick="setDisplayCurrency('ETH')">ETH</button>
+        </div>
+
+        <div class="d-sec-lbl">Your Ethereum Wallet</div>
+        <div class="wallet-box-d">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div class="mono" style="font-size:0.7rem;" id="dWalletAddr">Sign in to view 0x address</div>
+            <button class="copy-tag" onclick="copyText('dWalletAddr', 'ETH address copied')">⧉ Copy</button>
+          </div>
+          <div style="font-size:1.05rem; font-weight:800; margin-top:8px;" id="dEthBal">0.000000 ETH</div>
+          <div style="font-size:0.72rem; color:var(--muted);" id="dNgnEq">≈ ₦0.00 NGN equivalent</div>
+          <div style="font-size:0.66rem; color:var(--muted); margin-top:2px;">ETH-backed account balance</div>
+          <button class="copy-tag" style="margin-top:8px; width:100%;" onclick="toggleDrawerKey()">Export Private Key (MetaMask)</button>
+          <div id="dPrivKey" class="mono hidden" style="font-size:0.68rem; color:var(--lime); margin-top:6px;"></div>
+        </div>
+
+        <div class="d-sec-lbl">Quick Actions</div>
+        <button class="action-item" onclick="closeDrawer(); openDeposit();">🏛 Deposit NGN</button>
+        <button class="action-item" onclick="closeDrawer(); openWithdraw();">↗ Withdraw ETH</button>
+        <button class="action-item" onclick="closeDrawer(); openOwnerVaultModal();">🔐 Owner Vaults &amp; Refunds</button>
+        <button class="action-item" onclick="closeDrawer(); openAdminModal();">⚙ Admin Portal</button>
+
+        <div class="d-sec-lbl">VIP Status</div>
+        <div class="vip-card" onclick="upgradeVip()">
+          <span style="font-size:1.1rem;">👑</span>
+          <div>
+            <div style="font-size:0.8rem; font-weight:800; color:var(--lime);" id="vipTitle">Upgrade to VIP</div>
+            <div style="font-size:0.68rem; color:var(--muted);" id="vipSub">₦5,000 / 3 months · 0% launch fee</div>
+          </div>
+        </div>
+
+        <div class="d-sec-lbl">Referral Program</div>
+        <div class="ref-box">
+          <div class="ref-link-row">
+            <div class="ref-link-txt" id="refLinkText">https://naijalaunch.app/?ref=guest</div>
+            <button class="copy-tag" onclick="copyText('refLinkText', 'Referral link copied')">⧉ Copy</button>
+          </div>
+          <div style="font-size:0.68rem; color:var(--muted); margin-top:6px;" id="refProgressText">0/5 Qualified Referrals (Requires 2 launches per user)</div>
+          <button class="btn-claim-ref" id="btnClaimRef" onclick="claimReferralBonus()">🎁 Claim ₦1,000 Bonus</button>
+        </div>
+
+        <div class="d-sec-lbl">Account</div>
+        <div id="dSignedOutBox">
+          <button class="btn-lime-big" style="margin-top:0;" onclick="closeDrawer(); openAuthModal();">Sign In / Create Account</button>
+        </div>
+        <div id="dSignedInBox" class="hidden">
+          <div style="font-size:0.76rem; margin-bottom:8px; color:var(--text);" id="dUserEmail">user@email.com</div>
+          <button class="action-item" onclick="closeDrawer(); openAuthModal();">🔄 Switch Account</button>
+          <button class="action-item" style="color:var(--danger);" onclick="logoutUser()">↪ Log Out</button>
+        </div>
+      </div>
+
+      <button class="btn-lime-big" onclick="closeDrawer(); openLaunch();">⚡ Launch Coin</button>
+    </aside>
+  </div>
+
+  <!-- MODAL: EMAIL + PASSWORD SIGN IN / SIGN UP -->
+  <div class="modal-bg" id="authModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>Email & Password Sign In / Sign Up</h3>
+        <button class="x-btn" onclick="closeModal('authModal')">✕</button>
+      </div>
+      <label class="f-lbl">Email</label>
+      <input type="email" class="f-inp" id="authEmail" placeholder="you@example.com" />
+      <label class="f-lbl">Password</label>
+      <input type="password" class="f-inp" id="authPass" placeholder="At least 6 characters" />
+      <button class="btn-lime-big" onclick="loginUser()">Sign In</button>
+      <button class="btn-dark-big" onclick="signupUser()">Sign Up & Generate ETH Wallet</button>
+    </div>
+  </div>
+
+  <!-- MODAL: DEPOSIT NGN -> ETH -->
+  <div class="modal-bg" id="depositModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>Deposit NGN → ETH</h3>
+        <button class="x-btn" onclick="closeModal('depositModal')">✕</button>
+      </div>
+      <div class="inner-panel">
+        <div class="b-row"><span style="color:var(--muted);">Bank Name</span><strong id="depBankName">SmartCash PSB</strong></div>
+        <div class="b-row">
+          <span style="color:var(--muted);">Account Name</span>
+          <strong id="depAcctName" style="text-align:right;">OGBONNA Chimma Blessing</strong>
+          <button class="copy-tag" onclick="copyText('depAcctName', 'Account name copied')">⧉ Copy</button>
+        </div>
+        <div class="b-row">
+          <span style="color:var(--muted);">Account Number</span>
+          <strong class="mono" id="depAcctNum">09012345750</strong>
+          <button class="copy-tag" onclick="copyText('depAcctNum', 'Account number copied')">⧉ Copy</button>
+        </div>
+      </div>
+      <div class="inner-panel">
+        <div class="b-row"><span style="color:var(--muted);">Amount Sent</span><strong id="dCalcSent">₦0</strong></div>
+        <div class="b-row"><span style="color:var(--muted);">Deposit Fee (5%)</span><strong style="color:var(--danger);" id="dCalcFee">-₦0</strong></div>
+        <div class="b-row"><strong>Net NGN Credited</strong><strong id="dCalcNet">₦0</strong></div>
+        <div class="b-row"><span style="color:var(--muted);">Est. ETH Output</span><strong style="color:var(--lime);" id="dCalcEth">0.000000 ETH</strong></div>
+      </div>
+      <label class="f-lbl">Amount Transferred (NGN)</label>
+      <input type="number" class="f-inp" id="depAmountInp" placeholder="₦" min="500" oninput="calcDepositBox()" />
+      <label class="f-lbl">Sender Account Name</label>
+      <input type="text" class="f-inp" id="depSenderName" placeholder="Name on the sending bank account" />
+      <label class="f-lbl">Sender Account Number (10 digits)</label>
+      <input type="text" class="f-inp" id="depSenderAcct" placeholder="0123456789" maxlength="10" />
+      <label class="f-lbl">Destination ETH Address</label>
+      <input type="text" class="f-inp mono" id="depDestEth" placeholder="0x..." />
+      <button class="btn-lime-big" onclick="submitDepositOrder()">I Have Transferred</button>
+    </div>
+  </div>
+
+  <!-- MODAL: WITHDRAW ETH -->
+  <div class="modal-bg" id="withdrawModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>Withdraw ETH</h3>
+        <button class="x-btn" onclick="closeModal('withdrawModal')">✕</button>
+      </div>
+      <p style="font-size:0.72rem; color:var(--muted); margin-bottom:8px;">
+        Send ETH from your account wallet. Transfers are irreversible—check destination address carefully.
+      </p>
+      <div style="font-size:0.78rem; font-weight:700; margin-bottom:8px;" id="wdAvailText">Balance: 0.000000 ETH</div>
+      <label class="f-lbl">Destination Ethereum Address</label>
+      <input type="text" class="f-inp mono" id="wdToAddr" placeholder="0x..." />
+      <label class="f-lbl">Amount (ETH)</label>
+      <input type="number" class="f-inp" id="wdEthAmt" placeholder="0.00" step="0.0001" />
+      <button class="btn-lime-big" onclick="submitWithdraw()">Send ETH</button>
+    </div>
+  </div>
+
+  <!-- MODAL: LAUNCH COIN -->
+  <div class="modal-bg" id="launchModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>🚀 Launch Coin (₦500)</h3>
+        <button class="x-btn" onclick="closeModal('launchModal')">✕</button>
+      </div>
+      <label class="f-lbl">Coin Name</label>
+      <input type="text" class="f-inp" id="lName" placeholder="e.g. Naija Alpha" />
+      <label class="f-lbl">Ticker</label>
+      <input type="text" class="f-inp" id="lTicker" placeholder="e.g. NALPH" maxlength="8" />
+      <label class="f-lbl">Initial Curve Liquidity (NGN)</label>
+      <input type="number" class="f-inp" id="lLiq" value="250000" min="10000" />
+      <button class="btn-lime-big" onclick="launchNewToken()">Launch Coin (₦500)</button>
+    </div>
+  </div>
+
+  
+  <!-- MODAL: OWNER VAULT & EMERGENCY REFUND INSPECTOR (PASSWORD LOCKED) -->
+  <div class="modal-bg" id="ownerVaultModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>🔐 Owner Vault &amp; Refund Inspector</h3>
+        <button class="x-btn" onclick="lockAndCloseVaultModal()">✕</button>
+      </div>
+
+      <div id="vaultLockScreen" class="vault-lock-box">
+        <div style="font-size:0.78rem; font-weight:800; color:var(--lime);">Owner Vault Password Required</div>
+        <p style="font-size:0.7rem; color:var(--muted); margin-top:4px; line-height:1.45;">
+          Only the verified app owner can view per-coin vault balances, decrypt coin private keys, and execute emergency refunds back to holders.
+        </p>
+        <div id="vaultSetupNotice" class="hidden" style="font-size:0.68rem; color:var(--gold); margin-top:6px;">
+          First-time setup: Set your strong Owner Vault Password below (used to encrypt every launched coin's private key).
+        </div>
+        <label class="f-lbl">Owner Vault Password</label>
+        <input type="password" class="f-inp" id="vaultPassInput" placeholder="Enter your owner vault password" />
+        <button class="btn-lime-big" id="btnUnlockVault" onclick="unlockOwnerVault()">Unlock Vaults &amp; Keys</button>
+      </div>
+
+      <div id="vaultUnlockedScreen" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:0.72rem; color:var(--lime); font-weight:700;">● Vault Unlocked (Auto-locks on close)</span>
+          <button class="copy-tag" onclick="lockOwnerVault()">Lock Now</button>
+        </div>
+        <div id="ownerCoinVaultsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADMIN PORTAL -->
+  <div class="modal-bg" id="adminModal">
+    <div class="modal-card">
+      <div class="m-head">
+        <h3>⚙ Admin Portal</h3>
+        <button class="x-btn" onclick="closeModal('adminModal')">✕</button>
+      </div>
+      <div class="inner-panel" style="padding:10px; margin-bottom:10px;">
+        <div style="font-size:0.72rem; color:var(--muted);">
+          User submits Naira transfer → lands here for Admin → Admin approves after confirming payment → user NGN balance is credited.
+        </div>
+        <div style="display:flex; gap:10px; margin-top:8px; font-size:0.72rem; font-weight:800;">
+          <span style="color:var(--lime);" id="adminPendingDepositsCount">Pending NGN Deposits: 0</span>
+          <span style="color:var(--gold);" id="adminPendingWithdrawsCount">Pending Withdrawals: 0</span>
+        </div>
+      </div>
+      <div class="filter-pills" style="grid-template-columns: repeat(3, 1fr); margin-bottom:10px;">
+        <button class="f-pill active" id="admTabDeposits" onclick="setAdminTab('deposit', this)">🏛 NGN Deposits</button>
+        <button class="f-pill" id="admTabWithdraws" onclick="setAdminTab('withdraw', this)">↗ Withdrawals</button>
+        <button class="f-pill" id="admTabAll" onclick="setAdminTab('all', this)">📋 All Orders</button>
+      </div>
+      <div id="adminQueueList" style="font-size:0.78rem; color:var(--muted);">Loading orders...</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+      signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, updateDoc, collection,
+      addDoc, onSnapshot, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+    // REPLACE WITH YOUR FIREBASE CONFIG
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCYwQcoifpgBxBhLrXTd7wdjhG9tdGtTbI",
+      authDomain: "naijalaunch-52704.firebaseapp.com",
+      projectId: "naijalaunch-52704",
+      storageBucket: "naijalaunch-52704.firebasestorage.app",
+      messagingSenderId: "259414052126",
+      appId: "1:259414052126:web:cdfcc2c6a2dd3e255a0d0f",
+      measurementId: "G-7H49Z113XY"
+    };
+
+    const APP_CFG = {
+      bankName: "SmartCash PSB",
+      accountName: "OGBONNA Chimma Blessing",
+      accountNumber: "09012345750",
+      ngnPerEth: 2432820,
+      ngnPerUsd: 1600,
+      feeRate: 0.05,
+      launchFeeNgn: 500,
+      vipFeeNgn: 5000,
+      referralBonusNgn: 1000
+    };
+
+    const app = initializeApp(FIREBASE_CONFIG);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let profile = null;
+    let tokens = [];
+    let trades = [];
+    let selectedTokenId = null;
+    let tradeSide = "buy";
+    let slippage = 1;
+    let displayCurrency = "NGN";
+    let exploreFilter = "trending";
+    let timeframe = "ALL";
+
+    const $ = (id) => document.getElementById(id);
+
+    $("depBankName").textContent = APP_CFG.bankName;
+    $("depAcctName").textContent = APP_CFG.accountName;
+    $("depAcctNum").textContent = APP_CFG.accountNumber;
+    $("footEthRate").textContent = `₦${APP_CFG.ngnPerEth.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    $("footUsdRate").textContent = `₦${APP_CFG.ngnPerUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+    window.toast = (msg) => {
+      const t = $("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      clearTimeout(window._t);
+      window._t = setTimeout(() => { t.style.display = "none"; }, 3000);
+    };
+
+    window.openModal = (id) => $(id).classList.add("open");
+    window.closeModal = (id) => $(id).classList.remove("open");
+    window.openDrawer = () => $("drawerBg").classList.add("open");
+    window.closeDrawer = () => $("drawerBg").classList.remove("open");
+    window.openAuthModal = () => openModal("authModal");
+    window.openDeposit = () => { if (!currentUser) return openAuthModal(); openModal("depositModal"); };
+    window.openWithdraw = () => {
+      if (!currentUser) return openAuthModal();
+      const eth = ((profile?.ngnBalance || 0) / APP_CFG.ngnPerEth).toFixed(6);
+      $("wdAvailText").textContent = `Balance: ${eth} ETH (₦${Number(profile?.ngnBalance || 0).toLocaleString()})`;
+      openModal("withdrawModal");
+    };
+    window.openLaunch = () => { if (!currentUser) return openAuthModal(); openModal("launchModal"); };
+    window.openAdminModal = () => { if (!currentUser) return openAuthModal(); openModal("adminModal"); };
+
+    window.copyText = async (id, msg) => {
+      await navigator.clipboard.writeText($(id).textContent.trim());
+      toast(msg);
+    };
+
+    window.toggleDrawerKey = () => {
+      const el = $("dPrivKey");
+      el.textContent = profile?.evmPrivateKey || "";
+      el.classList.toggle("hidden");
+    };
+
+    window.refreshRateDisplay = () => {
+      $("rateCheckedTime").textContent = `Rate refreshed at ${new Date().toLocaleTimeString()} · Naira UI / ETH Curve`;
+      toast("Rate display refreshed.");
+    };
+
+    function formatMoney(ngnVal) {
+      const n = Number(ngnVal || 0);
+      if (displayCurrency === "USD") return `$${(n / APP_CFG.ngnPerUsd).toFixed(2)}`;
+      if (displayCurrency === "ETH") return `${(n / APP_CFG.ngnPerEth).toFixed(6)} ETH`;
+      return `₦${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    }
+
+    window.setDisplayCurrency = (curr) => {
+      displayCurrency = curr;
+      document.querySelectorAll("[data-curr]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.curr === curr);
+      });
+      refreshWalletDisplays();
+      renderExplore();
+      if (selectedTokenId) refreshTradeView();
+    };
+
+    function refreshWalletDisplays() {
+      const ngn = Number(profile?.ngnBalance || 0);
+      const eth = ngn / APP_CFG.ngnPerEth;
+      $("wbMainBal").textContent = formatMoney(ngn);
+      $("wbSubBal").textContent = `${eth.toFixed(6)} ETH`;
+      $("dEthBal").textContent = `${eth.toFixed(6)} ETH`;
+      $("dNgnEq").textContent = `≈ ₦${ngn.toLocaleString(undefined, { maximumFractionDigits: 2 })} NGN equivalent`;
+      $("tradeWalletBal").textContent = `₦${ngn.toLocaleString()}`;
+    }
+
+    // AUTH (Email & Password)
+    window.signupUser = async () => {
+      const email = $("authEmail").value.trim();
+      const pass = $("authPass").value;
+      if (!email || pass.length < 6) return toast("Enter valid email & 6+ char password.");
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        const w = ethers.Wallet.createRandom();
+        await setDoc(doc(db, "users", cred.user.uid), {
+          uid: cred.user.uid,
+          email,
+          evmAddress: w.address,
+          evmPrivateKey: w.privateKey,
+          ngnBalance: 2000,
+          isVip: false,
+          holdings: {},
+          avgBuyNgn: {},
+          launchesCount: 0,
+          referralClaimed: false,
+          createdAt: serverTimestamp()
+        });
+        closeModal("authModal");
+        toast("Account created & ETH wallet generated!");
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+
+    window.loginUser = async () => {
+      try {
+        await signInWithEmailAndPassword(auth, $("authEmail").value.trim(), $("authPass").value);
+        closeModal("authModal");
+        toast("Signed in.");
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+
+    window.logoutUser = async () => {
+      await signOut(auth);
+      closeDrawer();
+      toast("Logged out.");
+    };
+
+    // DEPOSIT & WITHDRAW
+    window.calcDepositBox = () => {
+      const sent = parseFloat($("depAmountInp").value) || 0;
+      const fee = sent * APP_CFG.feeRate;
+      const net = Math.max(0, sent - fee);
+      const eth = net / APP_CFG.ngnPerEth;
+      $("dCalcSent").textContent = `₦${sent.toLocaleString()}`;
+      $("dCalcFee").textContent = `-₦${fee.toLocaleString()}`;
+      $("dCalcNet").textContent = `₦${net.toLocaleString()}`;
+      $("dCalcEth").textContent = `${eth.toFixed(6)} ETH`;
+    };
+
+    window.submitDepositOrder = async () => {
+      if (!currentUser) return openAuthModal();
+      const ngnSent = parseFloat($("depAmountInp").value) || 0;
+      const senderName = $("depSenderName").value.trim();
+      const senderAcct = $("depSenderAcct").value.trim();
+      const destEth = $("depDestEth").value.trim();
+
+      if (ngnSent < 500) return toast("Minimum deposit is ₦500.");
+      if (!senderName) return toast("Enter sender account name.");
+      if (!/^\d{10}$/.test(senderAcct)) return toast("Enter 10-digit sender account number.");
+      if (!ethers.isAddress(destEth)) return toast("Enter valid 0x Ethereum address.");
+
+      const feeNgn = ngnSent * APP_CFG.feeRate;
+      const netNgn = ngnSent - feeNgn;
+      const ethOut = Number((netNgn / APP_CFG.ngnPerEth).toFixed(6));
+
+      await addDoc(collection(db, "orders"), {
+        type: "deposit",
+        userId: currentUser.uid,
+        email: currentUser.email,
+        ngnSent,
+        netNgn,
+        ethOut,
+        senderName,
+        senderAcct,
+        destEth,
+        status: "pending",
+        createdAt: Date.now()
+      });
+      $("depAmountInp").value = "";
+      $("depSenderName").value = "";
+      $("depSenderAcct").value = "";
+      calcDepositBox();
+      closeModal("depositModal");
+      toast(`Transfer logged! ${ethOut} ETH pending verification.`);
+    };
+
+    window.submitWithdraw = async () => {
+      if (!currentUser || !profile) return;
+      const to = $("wdToAddr").value.trim();
+      const ethAmt = parseFloat($("wdEthAmt").value) || 0;
+      const maxEth = (profile.ngnBalance || 0) / APP_CFG.ngnPerEth;
+      if (!ethers.isAddress(to)) return toast("Enter valid 0x Ethereum address.");
+      if (ethAmt <= 0 || ethAmt > maxEth) return toast("Insufficient ETH balance.");
+
+      const ngnDeduct = ethAmt * APP_CFG.ngnPerEth;
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        ngnBalance: Number(Math.max(0, (profile.ngnBalance || 0) - ngnDeduct).toFixed(2))
+      });
+      await addDoc(collection(db, "orders"), {
+        type: "withdraw",
+        userId: currentUser.uid,
+        email: currentUser.email,
+        ethOut: ethAmt,
+        netNgn: ngnDeduct,
+        destEth: to,
+        status: "pending",
+        createdAt: Date.now()
+      });
+      $("wdEthAmt").value = "";
+      closeModal("withdrawModal");
+      toast(`Withdrawal of ${ethAmt} ETH submitted.`);
+    };
+
+    window.upgradeVip = async () => {
+      if (!currentUser || !profile) return openAuthModal();
+      if (profile.isVip) return toast("VIP already active!");
+      if ((profile.ngnBalance || 0) < APP_CFG.vipFeeNgn) return toast("Need ₦5,000 balance for VIP.");
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        ngnBalance: profile.ngnBalance - APP_CFG.vipFeeNgn,
+        isVip: true
+      });
+      toast("VIP activated for 3 months!");
+    };
+
+    window.claimReferralBonus = async () => {
+      if (!currentUser || !profile) return openAuthModal();
+      if (profile.referralClaimed) return toast("Bonus already claimed.");
+      const launches = Number(profile.launchesCount || 0);
+      if (launches < 2) return toast(`Launch ${2 - launches} more coin(s) to unlock bonus.`);
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        ngnBalance: Number(((profile.ngnBalance || 0) + APP_CFG.referralBonusNgn).toFixed(2)),
+        referralClaimed: true
+      });
+      toast("₦1,000 bonus credited!");
+    };
+
+    // LAUNCH TOKEN
+    window.launchNewToken = async () => {
+      if (!currentUser || !profile) return openAuthModal();
+      const name = $("lName").value.trim();
+      const ticker = $("lTicker").value.trim().toUpperCase();
+      const initLiq = Math.max(10000, parseFloat($("lLiq").value) || 250000);
+      const fee = profile.isVip ? 0 : APP_CFG.launchFeeNgn;
+
+      if (!name || !ticker) return toast("Enter coin name & ticker.");
+      if ((profile.ngnBalance || 0) < fee) return toast("Insufficient NGN balance (need ₦500).");
+
+      const ca = ethers.Wallet.createRandom().address;
+      const vaultWallet = ethers.Wallet.createRandom();
+      const supply = 1000000;
+      const initPriceNgn = initLiq / supply;
+      let encryptedVaultKey = null;
+      if (vaultSessionPass) {
+        encryptedVaultKey = await encryptSecret(vaultWallet.privateKey, vaultSessionPass, profile.vaultPassSalt);
+      }
+
+      const docRef = await addDoc(collection(db, "tokens"), {
+        name,
+        ticker,
+        contractAddress: ca,
+        vaultAddress: vaultWallet.address,
+        vaultPrivateKeyPlain: vaultSessionPass ? null : vaultWallet.privateKey,
+        encryptedVaultKey: encryptedVaultKey,
+        creatorId: currentUser.uid,
+        creatorEmail: currentUser.email,
+        ngnReserve: initLiq,
+        tokenReserve: supply,
+        kNgn: initLiq * supply,
+        graduationTargetNgn: 2500000,
+        volumeNgn: 0,
+        priceHistory: [{ t: Date.now(), priceNgn: initPriceNgn }],
+        createdAt: Date.now()
+      });
+
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        ngnBalance: Number(Math.max(0, (profile.ngnBalance || 0) - fee).toFixed(2)),
+        launchesCount: Number(profile.launchesCount || 0) + 1
+      });
+
+      $("lName").value = "";
+      $("lTicker").value = "";
+      closeModal("launchModal");
+      toast(`${name} ($${ticker}) launched!`);
+      openTradeView(docRef.id);
+    };
+
+    // EXPLORE RENDER
+    window.setExploreFilter = (f, el) => {
+      exploreFilter = f;
+      document.querySelectorAll(".f-pill").forEach((b) => b.classList.remove("active"));
+      el.classList.add("active");
+      renderExplore();
+    };
+
+    window.renderExplore = () => {
+      $("totalCoinsCount").textContent = tokens.length;
+
+      const topFour = [...tokens].sort((a, b) => (b.volumeNgn || 0) - (a.volumeNgn || 0)).slice(0, 4);
+      $("featuredGrid").innerHTML = topFour.map((t, idx) => {
+        const tag = idx % 2 === 1 ? `<span class="badge-boost">✦ BOOSTED</span>` : `<span class="badge-sim">ETH CURVE</span>`;
+        return `
+          <div class="feat-card" onclick="openTradeView('${t.id}')">
+            <div class="feat-rank"><span>0${idx + 1}</span><span>↗</span></div>
+            <div class="feat-top">
+              <div class="tok-avatar">${(t.ticker || "T")[0]}</div>
+              <div style="min-width:0;">
+                <div class="feat-name">${t.name}</div>
+                <div class="feat-tick">$${t.ticker}</div>
+                <div class="feat-creator">by ${(t.creatorEmail || "creator").split("@")[0]}</div>
+              </div>
+            </div>
+            <div class="feat-bottom">
+              <span>MC ${formatMoney(t.ngnReserve)}</span>
+              ${tag}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const q = $("searchBox").value.trim().toLowerCase();
+      let list = [...tokens];
+      if (q) {
+        list = list.filter((t) =>
+          (t.name || "").toLowerCase().includes(q) ||
+          (t.ticker || "").toLowerCase().includes(q) ||
+          (t.contractAddress || "").toLowerCase().includes(q)
+        );
+      }
+      if (exploreFilter === "new") list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      else if (exploreFilter === "mc") list.sort((a, b) => (b.ngnReserve || 0) - (a.ngnReserve || 0));
+      else list.sort((a, b) => (b.volumeNgn || 0) - (a.volumeNgn || 0));
+
+      const feed = $("tokensFeed");
+      if (!list.length) {
+        feed.innerHTML = `<div class="empty-msg">No tokens match this filter.</div>`;
+        return;
+      }
+
+      feed.innerHTML = list.map((t, i) => {
+        const pct = Math.min(100, ((t.ngnReserve || 0) / (t.graduationTargetNgn || 2500000)) * 100);
+        const hi = i === 1 || i === 3 ? "highlight" : "";
+        return `
+          <div class="tok-row ${hi}" onclick="openTradeView('${t.id}')">
+            <div class="tr-head">
+              <div class="tr-left">
+                <div class="tr-rank">${i + 1}</div>
+                <div class="tok-avatar">${(t.ticker || "T")[0]}</div>
+                <div style="min-width:0;">
+                  <div class="tr-title">${t.name}<span>$${t.ticker}</span></div>
+                  <div class="tr-meta">by ${(t.creatorEmail || "creator").split("@")[0]} · ${pct.toFixed(1)}% curve</div>
+                </div>
+              </div>
+              <div class="tr-mc">${formatMoney(t.ngnReserve)}</div>
+            </div>
+            <div class="curve-bar"><div class="curve-fill" style="width:${pct.toFixed(1)}%"></div></div>
+          </div>
+        `;
+      }).join("");
+    };
+
+    // TRADE VIEW & CHART
+    window.showExploreView = () => {
+      selectedTokenId = null;
+      $("tradeView").classList.add("hidden");
+      $("exploreView").classList.remove("hidden");
+    };
+
+    window.openTradeView = (tokenId) => {
+      selectedTokenId = tokenId;
+      $("exploreView").classList.add("hidden");
+      $("tradeView").classList.remove("hidden");
+      setTradeSide("buy");
+      refreshTradeView();
+    };
+
+    window.setTimeframe = (tf, btn) => {
+      timeframe = tf;
+      document.querySelectorAll(".tf-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      if (t) drawPriceChart(t);
+    };
+
+    function drawPriceChart(t) {
+      const canvas = $("priceCanvas");
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const curPrice = (t.ngnReserve || 250000) / Math.max(1, t.tokenReserve || 1000000);
+      let pts = Array.isArray(t.priceHistory) && t.priceHistory.length ? t.priceHistory.map((p) => Number(p.priceNgn || curPrice)) : [curPrice * 0.85, curPrice];
+      if (pts.length === 1) pts = [pts[0] * 0.9, pts[0]];
+
+      const minP = Math.min(...pts) * 0.92;
+      const maxP = Math.max(...pts) * 1.08;
+      const span = Math.max(1e-9, maxP - minP);
+
+      // Subtle horizontal grid lines
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
+      ctx.lineWidth = 1;
+      for (let g = 1; g <= 3; g++) {
+        const y = (h / 4) * g;
+        ctx.beginPath();
+        ctx.moveTo(12, y);
+        ctx.lineTo(w - 12, y);
+        ctx.stroke();
+      }
+
+      // Line path
+      ctx.strokeStyle = "#d4ff59";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      pts.forEach((p, idx) => {
+        const x = 14 + (idx / (pts.length - 1)) * (w - 28);
+        const y = h - 18 - ((p - minP) / span) * (h - 36);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Latest point dot
+      const lastX = 14 + (w - 28);
+      const lastY = h - 18 - ((pts[pts.length - 1] - minP) / span) * (h - 36);
+      ctx.fillStyle = "#d4ff59";
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    window.setTradeSide = (side) => {
+      tradeSide = side;
+      $("btnModeBuy").className = side === "buy" ? "bs-btn buy-active" : "bs-btn";
+      $("btnModeSell").className = side === "sell" ? "bs-btn sell-active" : "bs-btn";
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      const tick = t ? t.ticker : "TOKEN";
+
+      if (side === "buy") {
+        $("tradeAmtLbl").textContent = "Purchase amount";
+        $("tradeInputUnit").textContent = "NGN";
+        $("qTotalLbl").textContent = "Purchase + 5% fee";
+        $("btnExecuteTrade").textContent = `Buy ${tick}`;
+        $("btnExecuteTrade").style.background = "var(--lime)";
+        $("btnExecuteTrade").style.color = "var(--lime-text)";
+        $("presetGrid").innerHTML = `
+          <button class="preset-btn" onclick="setTradePreset(1000)">₦1,000</button>
+          <button class="preset-btn" onclick="setTradePreset(5000)">₦5,000</button>
+          <button class="preset-btn" onclick="setTradePreset(20000)">₦20,000</button>
+          <button class="preset-btn" onclick="setTradePreset('max')">Max</button>
+        `;
+      } else {
+        $("tradeAmtLbl").textContent = `Sell amount (${tick})`;
+        $("tradeInputUnit").textContent = tick;
+        $("qTotalLbl").textContent = "Net NGN payout (after 5% fee)";
+        $("btnExecuteTrade").textContent = `Sell ${tick}`;
+        $("btnExecuteTrade").style.background = "var(--danger)";
+        $("btnExecuteTrade").style.color = "#fff";
+        $("presetGrid").innerHTML = `
+          <button class="preset-btn" onclick="setTradePreset('25%')">25%</button>
+          <button class="preset-btn" onclick="setTradePreset('50%')">50%</button>
+          <button class="preset-btn" onclick="setTradePreset('75%')">75%</button>
+          <button class="preset-btn" onclick="setTradePreset('max')">Max (100%)</button>
+        `;
+      }
+      $("tradeAmountInput").value = "";
+      updateTradeQuote();
+    };
+
+    window.setTradePreset = (val) => {
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      if (!t) return;
+      const held = Number((profile?.holdings || {})[t.id] || 0);
+      if (tradeSide === "buy") {
+        $("tradeAmountInput").value = val === "max" ? Math.floor(profile?.ngnBalance || 0) : val;
+      } else {
+        if (val === "max") $("tradeAmountInput").value = held;
+        else if (val === "25%") $("tradeAmountInput").value = (held * 0.25).toFixed(2);
+        else if (val === "50%") $("tradeAmountInput").value = (held * 0.5).toFixed(2);
+        else if (val === "75%") $("tradeAmountInput").value = (held * 0.75).toFixed(2);
+      }
+      updateTradeQuote();
+    };
+
+    window.setSlippage = (s, btn) => {
+      slippage = s;
+      document.querySelectorAll(".slip-pill").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+
+    function refreshTradeView() {
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      if (!t) return;
+
+      const priceNgn = (t.ngnReserve || 250000) / Math.max(1, t.tokenReserve || 1000000);
+      const priceEth = priceNgn / APP_CFG.ngnPerEth;
+
+      $("tradeTitle").textContent = `Trade ${t.ticker}`;
+      $("tradeTickerBadge").textContent = `$${t.ticker}`;
+      $("tCaLabel").textContent = t.contractAddress ? `${t.contractAddress.slice(0, 6)}...${t.contractAddress.slice(-4)}` : "";
+      $("tPriceNgn").textContent = `₦${priceNgn.toFixed(4)}`;
+      $("tPriceEth").textContent = `≈ ${priceEth.toFixed(8)} ETH`;
+
+      const held = Number((profile?.holdings || {})[t.id] || 0);
+      const avgBuy = Number((profile?.avgBuyNgn || {})[t.id] || priceNgn);
+      const curValNgn = held * priceNgn;
+      const costBasisNgn = held * avgBuy;
+      const pnlNgn = curValNgn - costBasisNgn;
+
+      const gainPct = costBasisNgn > 0 ? ((pnlNgn / costBasisNgn) * 100) : 0;
+      const vAddr = t.vaultAddress || t.contractAddress || "0x...";
+      if ($("tVaultAddr")) $("tVaultAddr").textContent = vAddr;
+      if ($("posGainPct")) {
+        $("posGainPct").textContent = (gainPct >= 0 ? "+" : "") + gainPct.toFixed(1) + "%";
+        $("posGainPct").className = "pnl-pill " + (gainPct >= 0 ? "pnl-pos" : "pnl-neg");
+      }
+      $("userTokenPos").textContent = `${held.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${t.ticker}`;
+      $("posAvgPrice").textContent = `₦${avgBuy.toFixed(4)}`;
+      $("posCurVal").textContent = `₦${Math.round(curValNgn).toLocaleString()}`;
+      $("posPnl").textContent = `${pnlNgn >= 0 ? "+" : ""}₦${Math.round(pnlNgn).toLocaleString()}`;
+      $("posPnl").style.color = pnlNgn >= 0 ? "var(--lime)" : "var(--danger)";
+
+      const target = t.graduationTargetNgn || 2500000;
+      const pct = Math.min(100, ((t.ngnReserve || 0) / target) * 100);
+      const remNgn = Math.max(0, target - (t.ngnReserve || 0));
+      $("tradeCurvePct").textContent = `${pct.toFixed(1)}%`;
+      $("tradeCurveBar").style.width = `${pct.toFixed(1)}%`;
+      $("curveMcText").textContent = `₦${Math.round(t.ngnReserve || 0).toLocaleString()}`;
+      $("curveTargetText").textContent = `₦${target.toLocaleString()} target`;
+      $("tradeCurveSub").textContent = `₦${Math.round(remNgn).toLocaleString()} (${(remNgn / APP_CFG.ngnPerEth).toFixed(4)} ETH) needed to graduate`;
+
+      drawPriceChart(t);
+      renderRecentTrades(t.id, t.ticker);
+      renderHolders(t, held);
+      updateTradeQuote();
+    }
+
+    function renderRecentTrades(tokenId, ticker) {
+      const box = $("recentTradesList");
+      const list = trades.filter((x) => x.tokenId === tokenId).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 6);
+      if (!list.length) {
+        box.innerHTML = `<div style="font-size:0.72rem; color:var(--muted);">No trades for $${ticker} yet.</div>`;
+        return;
+      }
+      box.innerHTML = list.map((tr) => `
+        <div class="rt-row">
+          <div>
+            <span class="${tr.side === "buy" ? "side-buy" : "side-sell"}">${tr.side.toUpperCase()}</span>
+            <span class="mono" style="margin-left:6px; color:var(--muted);">${tr.traderShort || "0x..."}</span>
+          </div>
+          <div style="text-align:right;">
+            <strong>₦${Number(tr.ngnAmt || 0).toLocaleString()}</strong>
+            <div style="font-size:0.64rem; color:var(--muted);">${Number(tr.tokensAmt || 0).toFixed(1)} ${ticker}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderHolders(t, userHeld) {
+      const box = $("topHoldersList");
+      const poolShare = Math.max(0, 100 - Math.min(95, (userHeld / 1000000) * 100));
+      const uPct = Math.min(95, (userHeld / 1000000) * 100);
+      box.innerHTML = `
+        <div class="h-row">
+          <div class="h-top"><span class="mono">Bonding Curve Pool</span><strong>${poolShare.toFixed(1)}%</strong></div>
+          <div class="h-bar-bg"><div class="h-bar-fill" style="width:${poolShare.toFixed(1)}%"></div></div>
+        </div>
+        <div class="h-row">
+          <div class="h-top"><span class="mono">${profile?.evmAddress ? profile.evmAddress.slice(0, 6) + "..." + profile.evmAddress.slice(-4) : "You"}</span><strong>${uPct.toFixed(1)}%</strong></div>
+          <div class="h-bar-bg"><div class="h-bar-fill" style="width:${uPct.toFixed(1)}%"></div></div>
+        </div>
+      `;
+    }
+
+    window.updateTradeQuote = () => {
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      if (!t) return;
+      const amt = parseFloat($("tradeAmountInput").value) || 0;
+
+      if (tradeSide === "buy") {
+        const fee = amt * APP_CFG.feeRate;
+        const netNgn = Math.max(0, amt - fee);
+        const nextNgn = t.ngnReserve + netNgn;
+        const nextTok = t.kNgn / nextNgn;
+        const tokensOut = Math.max(0, t.tokenReserve - nextTok);
+
+        $("qFeeNgn").textContent = `₦${fee.toFixed(2)}`;
+        $("qFeeEth").textContent = `≈ ${(fee / APP_CFG.ngnPerEth).toFixed(8)} ETH`;
+        $("qTotalNgn").textContent = `₦${amt.toLocaleString()}`;
+        $("qEstOut").textContent = `${tokensOut.toFixed(2)} ${t.ticker}`;
+      } else {
+        const nextTok = t.tokenReserve + amt;
+        const nextNgn = t.kNgn / nextTok;
+        const grossNgn = Math.max(0, t.ngnReserve - nextNgn);
+        const fee = grossNgn * APP_CFG.feeRate;
+        const netPayout = Math.max(0, grossNgn - fee);
+
+        $("qFeeNgn").textContent = `₦${fee.toFixed(2)}`;
+        $("qFeeEth").textContent = `≈ ${(fee / APP_CFG.ngnPerEth).toFixed(8)} ETH`;
+        $("qTotalNgn").textContent = `₦${netPayout.toFixed(2)}`;
+        $("qEstOut").textContent = `₦${netPayout.toFixed(2)} (${(netPayout / APP_CFG.ngnPerEth).toFixed(6)} ETH)`;
+      }
+    };
+
+    window.executeTrade = async () => {
+      if (!currentUser || !profile) return openAuthModal();
+      const t = tokens.find((x) => x.id === selectedTokenId);
+      if (!t) return;
+      const amt = parseFloat($("tradeAmountInput").value) || 0;
+      if (amt <= 0) return toast("Enter an amount.");
+
+      const holdings = { ...(profile.holdings || {}) };
+      const avgBuyNgn = { ...(profile.avgBuyNgn || {}) };
+      const held = Number(holdings[t.id] || 0);
+      const history = Array.isArray(t.priceHistory) ? [...t.priceHistory] : [];
+
+      if (tradeSide === "buy") {
+        if ((profile.ngnBalance || 0) < amt) return toast("Insufficient NGN balance.");
+        const fee = amt * APP_CFG.feeRate;
+        const netNgn = amt - fee;
+        const nextNgn = t.ngnReserve + netNgn;
+        const nextTok = t.kNgn / nextNgn;
+        const tokensOut = Math.max(0, t.tokenReserve - nextTok);
+        const newPriceNgn = nextNgn / Math.max(1, nextTok);
+
+        const prevCost = held * Number(avgBuyNgn[t.id] || newPriceNgn);
+        const nextTotalTokens = held + tokensOut;
+        avgBuyNgn[t.id] = nextTotalTokens > 0 ? (prevCost + amt) / nextTotalTokens : newPriceNgn;
+        holdings[t.id] = nextTotalTokens;
+        history.push({ t: Date.now(), priceNgn: newPriceNgn });
+
+        const updTokBuy = {
+          ngnReserve: Number(nextNgn.toFixed(2)),
+          tokenReserve: Number(nextTok.toFixed(4)),
+          volumeNgn: (t.volumeNgn || 0) + amt,
+          priceHistory: history.slice(-30)
+        };
+        const updUsrBuy = {
+          ngnBalance: Number((profile.ngnBalance - amt).toFixed(2)),
+          holdings,
+          avgBuyNgn
+        };
+        // Immediate local UI feedback before network round-trip finishes
+        Object.assign(t, updTokBuy);
+        Object.assign(profile, updUsrBuy);
+        refreshWalletDisplays();
+        refreshTradeView();
+        toast(`Bought ${tokensOut.toFixed(2)} ${t.ticker}!`);
+
+        Promise.all([
+          updateDoc(doc(db, "tokens", t.id), updTokBuy),
+          updateDoc(doc(db, "users", currentUser.uid), updUsrBuy),
+          addDoc(collection(db, "trades"), {
+            tokenId: t.id,
+            side: "buy",
+            ngnAmt: amt,
+            tokensAmt: tokensOut,
+            traderShort: profile.evmAddress ? `${profile.evmAddress.slice(0, 4)}...${profile.evmAddress.slice(-4)}` : "user",
+            createdAt: Date.now()
+          })
+        ]).catch((err) => toast("Sync warning: " + err.message));
+      } else {
+        if (amt > held + 1e-6) return toast(`You only hold ${held.toFixed(2)} ${t.ticker}.`);
+        const sellAmt = Math.min(amt, held);
+        const avgBuy = Number((profile.avgBuyNgn || {})[t.id] || ((t.ngnReserve || 250000) / Math.max(1, t.tokenReserve || 1000000)));
+        const costOfSold = sellAmt * avgBuy;
+
+        const nextTok = t.tokenReserve + sellAmt;
+        const nextNgn = t.kNgn / nextTok;
+        const grossNgn = Math.max(0, t.ngnReserve - nextNgn);
+        const netPayout = grossNgn * (1 - APP_CFG.feeRate);
+        const newPriceNgn = nextNgn / Math.max(1, nextTok);
+        const pctChange = costOfSold > 0 ? (((netPayout - costOfSold) / costOfSold) * 100) : 0;
+        const pctLabel = `${pctChange >= 0 ? "+" : ""}${pctChange.toFixed(1)}%`;
+
+        holdings[t.id] = Math.max(0, held - sellAmt);
+        if (holdings[t.id] === 0) delete avgBuyNgn[t.id];
+        history.push({ t: Date.now(), priceNgn: newPriceNgn });
+
+        const updTokSell = {
+          ngnReserve: Number(nextNgn.toFixed(2)),
+          tokenReserve: Number(nextTok.toFixed(4)),
+          volumeNgn: (t.volumeNgn || 0) + grossNgn,
+          priceHistory: history.slice(-30)
+        };
+        const updUsrSell = {
+          ngnBalance: Number(((profile.ngnBalance || 0) + netPayout).toFixed(2)),
+          holdings,
+          avgBuyNgn
+        };
+        // Immediate local UI feedback before network round-trip finishes
+        Object.assign(t, updTokSell);
+        Object.assign(profile, updUsrSell);
+        refreshWalletDisplays();
+        refreshTradeView();
+        toast(`Sold ${sellAmt.toFixed(2)} ${t.ticker} (${pctLabel}) → ₦${netPayout.toFixed(2)} returned!`);
+
+        Promise.all([
+          updateDoc(doc(db, "tokens", t.id), updTokSell),
+          updateDoc(doc(db, "users", currentUser.uid), updUsrSell),
+          addDoc(collection(db, "trades"), {
+            tokenId: t.id,
+            side: "sell",
+            ngnAmt: netPayout,
+            tokensAmt: sellAmt,
+            traderShort: profile.evmAddress ? `${profile.evmAddress.slice(0, 4)}...${profile.evmAddress.slice(-4)}` : "user",
+            createdAt: Date.now()
+          })
+        ]).catch((err) => toast("Sync warning: " + err.message));
+      }
+      $("tradeAmountInput").value = "";
+      updateTradeQuote();
+    };
+
+    // ADMIN ORDER APPROVAL
+    window.approveOrder = async (orderId, userId, netNgn, type) => {
+      await updateDoc(doc(db, "orders", orderId), { status: "approved" });
+      if (type === "deposit") {
+        const uRef = doc(db, "users", userId);
+        const uSnap = await getDoc(uRef);
+        if (uSnap.exists()) {
+          const cur = Number(uSnap.data().ngnBalance || 0);
+          await updateDoc(uRef, { ngnBalance: Number((cur + Number(netNgn)).toFixed(2)) });
+        }
+      }
+      toast("Order approved & balance credited.");
+    };
+
+    // FIRESTORE LISTENERS
+
+    onSnapshot(collection(db, "users"), function(snap) {
+      allUsersCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+      if (vaultSessionPass) renderOwnerCoinVaults();
+    });
+
+    onSnapshot(collection(db, "tokens"), (snap) => {
+      tokens = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderExplore();
+      if (selectedTokenId) refreshTradeView();
+      if (vaultSessionPass) renderOwnerCoinVaults();
+    });
+
+    onSnapshot(collection(db, "trades"), (snap) => {
+      trades = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (selectedTokenId) {
+        const t = tokens.find((x) => x.id === selectedTokenId);
+        if (t) renderRecentTrades(t.id, t.ticker);
+      }
+    });
+
+    let allOrdersCache = [];
+    let adminTab = "deposit";
+
+    window.setAdminTab = function(tab, el) {
+      adminTab = tab;
+      document.querySelectorAll("#admTabDeposits, #admTabWithdraws, #admTabAll").forEach(function(b) {
+        b.classList.remove("active");
+      });
+      if (el) el.classList.add("active");
+      renderAdminQueue();
+    };
+
+    function renderAdminQueue() {
+      const box = $("adminQueueList");
+      if (!box) return;
+      const pendingDep = allOrdersCache.filter(function(x) { return (x.type || "deposit") === "deposit" && x.status !== "approved"; }).length;
+      const pendingWd = allOrdersCache.filter(function(x) { return x.type === "withdraw" && x.status !== "approved"; }).length;
+      if ($("adminPendingDepositsCount")) $("adminPendingDepositsCount").textContent = "Pending NGN Deposits: " + pendingDep;
+      if ($("adminPendingWithdrawsCount")) $("adminPendingWithdrawsCount").textContent = "Pending Withdrawals: " + pendingWd;
+
+      const filtered = allOrdersCache.filter(function(x) {
+        if (adminTab === "all") return true;
+        return (x.type || "deposit") === adminTab;
+      }).sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+      if (!filtered.length) {
+        box.innerHTML = adminTab === "deposit"
+          ? "No Naira deposit requests yet."
+          : "No orders in this section yet.";
+        return;
+      }
+      box.innerHTML = filtered.map(function(o) {
+        const done = o.status === "approved";
+        const isDep = (o.type || "deposit") === "deposit";
+        return `
+          <div class="inner-panel" style="margin-bottom:8px;">
+            <div class="b-row">
+              <strong>${isDep ? "NAIRA DEPOSIT" : "WITHDRAW"}: ₦${Number(o.ngnSent || o.netNgn || 0).toLocaleString()} → Net ₦${Number(o.netNgn || 0).toLocaleString()}</strong>
+              <span style="color:${done ? "var(--lime)" : "var(--gold)"}; font-weight:700;">${o.status}</span>
+            </div>
+            <div style="font-size:0.7rem; color:var(--muted);">Sender: ${o.senderName || o.email || ""} ${o.senderAcct ? "(" + o.senderAcct + ")" : ""}</div>
+            <div class="mono" style="font-size:0.68rem; color:var(--muted); margin-top:3px;">User: ${o.email || o.userId || ""} · Wallet: ${o.destEth || ""}</div>
+            ${!done ? `<button class="btn-lime-big" style="padding:8px; font-size:0.74rem; margin-top:8px;" onclick="approveOrder('${o.id}', '${o.userId}', ${o.netNgn || 0}, '${o.type || "deposit"}')">${isDep ? "Approve Naira Deposit & Credit User" : "Approve Order"}</button>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    onSnapshot(collection(db, "orders"), (snap) => {
+      allOrdersCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+      renderAdminQueue();
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        $("dSignedOutBox").classList.add("hidden");
+        $("dSignedInBox").classList.remove("hidden");
+        $("dUserEmail").textContent = user.email;
+        $("topAvatarBtn").textContent = (user.email || "A")[0].toUpperCase();
+        $("refLinkText").textContent = `${window.location.origin}${window.location.pathname}?ref=${user.uid.slice(0, 8)}`;
+
+        const uRef = doc(db, "users", user.uid);
+        const snap = await getDoc(uRef);
+        if (!snap.exists()) {
+          const w = ethers.Wallet.createRandom();
+          await setDoc(uRef, {
+            uid: user.uid,
+            email: user.email,
+            evmAddress: w.address,
+            evmPrivateKey: w.privateKey,
+            ngnBalance: 2000,
+            isVip: false,
+            holdings: {},
+            avgBuyNgn: {},
+            launchesCount: 0,
+            referralClaimed: false,
+            createdAt: serverTimestamp()
+          });
+        }
+
+        onSnapshot(uRef, (s) => {
+          if (!s.exists()) return;
+          profile = s.data();
+          $("dWalletAddr").textContent = profile.evmAddress;
+          if (!$("depDestEth").value) $("depDestEth").value = profile.evmAddress;
+          if (profile.isVip) {
+            $("vipTitle").textContent = "VIP Active";
+            $("vipSub").textContent = "0% coin launch fee unlocked";
+          }
+          const launches = Number(profile.launchesCount || 0);
+          const qualRefs = Math.min(5, Math.floor(launches / 2));
+          $("refProgressText").textContent = `${qualRefs}/5 Qualified Referrals (Launches: ${launches}/2 for bonus)`;
+          if (launches >= 2 && !profile.referralClaimed) $("btnClaimRef").classList.add("ready");
+          else $("btnClaimRef").classList.remove("ready");
+
+          refreshWalletDisplays();
+          if (selectedTokenId) refreshTradeView();
+        });
+      } else {
+        profile = null;
+        $("dSignedOutBox").classList.remove("hidden");
+        $("dSignedInBox").classList.add("hidden");
+        $("topAvatarBtn").textContent = "A";
+        $("dWalletAddr").textContent = "Sign in to view 0x address";
+        refreshWalletDisplays();
+      }
+    });
+
+    // --- OWNER VAULT PASSWORD ENCRYPTION (PBKDF2 + AES-GCM) & EMERGENCY REFUNDS ---
+    let vaultSessionKey = null;
+    let vaultSessionPass = null;
+    let allUsersCache = [];
+    let revealedKeyTokenIds = {};
+
+    window.openOwnerVaultModal = function() {
+      if (!currentUser) return openAuthModal();
+      const hasPass = Boolean(profile && profile.vaultPassSalt && profile.vaultPassVerifier);
+      $("vaultSetupNotice").classList.toggle("hidden", hasPass);
+      $("btnUnlockVault").textContent = hasPass ? "Unlock Vaults & Keys" : "Set Owner Password & Unlock";
+      $("vaultPassInput").value = "";
+      $("vaultLockScreen").classList.remove("hidden");
+      $("vaultUnlockedScreen").classList.add("hidden");
+      openModal("ownerVaultModal");
+    };
+
+    window.lockOwnerVault = function() {
+      vaultSessionKey = null;
+      vaultSessionPass = null;
+      revealedKeyTokenIds = {};
+      $("vaultPassInput").value = "";
+      $("vaultLockScreen").classList.remove("hidden");
+      $("vaultUnlockedScreen").classList.add("hidden");
+    };
+
+    window.lockAndCloseVaultModal = function() {
+      lockOwnerVault();
+      closeModal("ownerVaultModal");
+    };
+
+    function bytesToB64(arr) {
+      let s = "";
+      for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+      return btoa(s);
+    }
+
+    function b64ToBytes(b64) {
+      const s = atob(b64);
+      const arr = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) arr[i] = s.charCodeAt(i);
+      return arr;
+    }
+
+    async function deriveAesKey(password, saltB64) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]
+      );
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: b64ToBytes(saltB64), iterations: 120000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptSecret(plainText, password, existingSaltB64) {
+      const salt = existingSaltB64 ? b64ToBytes(existingSaltB64) : crypto.getRandomValues(new Uint8Array(16));
+      const saltB64 = existingSaltB64 || bytesToB64(salt);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const aesKey = await deriveAesKey(password, saltB64);
+      const cipherBuf = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv }, aesKey, new TextEncoder().encode(plainText)
+      );
+      return {
+        cipherB64: bytesToB64(new Uint8Array(cipherBuf)),
+        ivB64: bytesToB64(iv),
+        saltB64: saltB64
+      };
+    }
+
+    async function decryptSecret(encObj, password) {
+      if (!encObj || !encObj.cipherB64 || !encObj.ivB64 || !encObj.saltB64) return null;
+      const aesKey = await deriveAesKey(password, encObj.saltB64);
+      const plainBuf = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: b64ToBytes(encObj.ivB64) }, aesKey, b64ToBytes(encObj.cipherB64)
+      );
+      return new TextDecoder().decode(plainBuf);
+    }
+
+    window.unlockOwnerVault = async function() {
+      if (!currentUser || !profile) return;
+      const pass = $("vaultPassInput").value;
+      if (!pass || pass.length < 6) return toast("Enter an owner vault password (6+ chars).");
+
+      try {
+        if (!profile.vaultPassSalt || !profile.vaultPassVerifier) {
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const saltB64 = bytesToB64(salt);
+          const verifier = await encryptSecret("NAIJA_LAUNCH_OWNER_VERIFIED", pass, saltB64);
+          await updateDoc(doc(db, "users", currentUser.uid), {
+            vaultPassSalt: saltB64,
+            vaultPassVerifier: verifier
+          });
+          vaultSessionKey = await deriveAesKey(pass, saltB64);
+          vaultSessionPass = pass;
+          toast("Owner vault password set & encrypted!");
+        } else {
+          const check = await decryptSecret(profile.vaultPassVerifier, pass);
+          if (check !== "NAIJA_LAUNCH_OWNER_VERIFIED") {
+            return toast("Incorrect owner vault password.");
+          }
+          vaultSessionKey = await deriveAesKey(pass, profile.vaultPassSalt);
+          vaultSessionPass = pass;
+          toast("Owner vaults unlocked.");
+        }
+        $("vaultLockScreen").classList.add("hidden");
+        $("vaultUnlockedScreen").classList.remove("hidden");
+        renderOwnerCoinVaults();
+      } catch (err) {
+        toast("Incorrect password or decryption failed.");
+      }
+    };
+
+    window.toggleRevealVaultKey = async function(tokenId) {
+      if (!vaultSessionPass) return toast("Unlock vault first.");
+      if (revealedKeyTokenIds[tokenId]) {
+        delete revealedKeyTokenIds[tokenId];
+        renderOwnerCoinVaults();
+        return;
+      }
+      const t = tokens.find(function(x) { return x.id === tokenId; });
+      if (!t || !t.encryptedVaultKey) return toast("No encrypted key stored for this coin.");
+      try {
+        const pk = await decryptSecret(t.encryptedVaultKey, vaultSessionPass);
+        revealedKeyTokenIds[tokenId] = pk;
+        renderOwnerCoinVaults();
+      } catch (e) {
+        toast("Could not decrypt key with current password.");
+      }
+    };
+
+    window.refundCoinHolders = async function(tokenId) {
+      if (!vaultSessionPass) return toast("Unlock owner vault first.");
+      const t = tokens.find(function(x) { return x.id === tokenId; });
+      if (!t) return;
+      const curPrice = (t.ngnReserve || 0) / Math.max(1, t.tokenReserve || 1000000);
+      let refundedTotal = 0;
+
+      for (const u of allUsersCache) {
+        const held = Number((u.holdings && u.holdings[tokenId]) || 0);
+        if (held > 0) {
+          const refundNgn = Number((held * curPrice).toFixed(2));
+          const nextHoldings = Object.assign({}, u.holdings || {});
+          delete nextHoldings[tokenId];
+          const nextAvg = Object.assign({}, u.avgBuyNgn || {});
+          delete nextAvg[tokenId];
+          await updateDoc(doc(db, "users", u.id), {
+            ngnBalance: Number(((u.ngnBalance || 0) + refundNgn).toFixed(2)),
+            holdings: nextHoldings,
+            avgBuyNgn: nextAvg
+          });
+          refundedTotal += refundNgn;
+        }
+      }
+
+      await updateDoc(doc(db, "tokens", tokenId), {
+        ngnReserve: Number(Math.max(0, (t.ngnReserve || 0) - refundedTotal).toFixed(2))
+      });
+      toast("Refunded NGN " + refundedTotal.toLocaleString() + " to " + t.ticker + " holders.");
+      renderOwnerCoinVaults();
+    };
+
+    window.renderOwnerCoinVaults = function() {
+      const box = $("ownerCoinVaultsList");
+      if (!box || !vaultSessionPass) return;
+      if (!tokens.length) {
+        box.innerHTML = '<div style="font-size:0.74rem; color:var(--muted);">No launched coins yet.</div>';
+        return;
+      }
+      box.innerHTML = tokens.map(function(t) {
+        const vaultAddr = t.vaultAddress || t.contractAddress || "0x...";
+        const vaultNgn = Number(t.ngnReserve || 0);
+        const vaultEth = (vaultNgn / APP_CFG.ngnPerEth).toFixed(6);
+        const revealedPk = revealedKeyTokenIds[t.id];
+        return (
+          '<div class="vault-coin-card">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<strong style="font-size:0.84rem;">' + t.name + ' <span style="color:var(--lime);">$' + t.ticker + '</span></strong>' +
+              '<span style="font-size:0.78rem; font-weight:800; color:var(--lime);">NGN ' + vaultNgn.toLocaleString() + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.68rem; color:var(--muted); margin-top:2px;">Vault balance: ' + vaultEth + ' ETH</div>' +
+            '<div class="mono" style="font-size:0.68rem; color:#cbd5e1; margin-top:6px;">Vault: ' + vaultAddr + '</div>' +
+            (revealedPk
+              ? '<div class="key-box mono">PK: ' + revealedPk + '</div>'
+              : '') +
+            '<div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">' +
+              '<button class="copy-tag" onclick="toggleRevealVaultKey('' + t.id + '')">' + (revealedPk ? 'Hide Private Key' : 'Decrypt Private Key') + '</button>' +
+              '<button class="btn-warn" onclick="refundCoinHolders('' + t.id + '')">Refund Holders</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+    };
+
+
+    window.settleCoinVaultBatch = async function(tokenId) {
+      if (!vaultSessionPass) return toast("Unlock owner vault first.");
+      const t = tokens.find(function(x) { return x.id === tokenId; });
+      if (!t) return;
+      const pending = Number(t.pendingVaultNgn || 0);
+      await updateDoc(doc(db, "tokens", tokenId), {
+        pendingVaultNgn: 0,
+        lastSettledAt: Date.now()
+      });
+      toast("Batch settled NGN " + pending.toLocaleString() + " for $" + t.ticker + " vault.");
+      renderOwnerCoinVaults();
+    };
+
+  </script>
+</body>
+</html>
