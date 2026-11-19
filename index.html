@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>naija.launch — Coin Launchpad & Admin Portal</title>
+  <title>naija.launch — Coin Launchpad &amp; Admin Portal</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.17.0/ethers.umd.min.js"></script>
   <style>
+
     :root {
       --bg: #0b0e13;
       --surface: #12161f;
@@ -342,11 +343,57 @@
       border-radius: 9px; padding: 7px 10px; font-size: 0.72rem; font-weight: 800; cursor: pointer;
     }
 
+  
+    .auth-strip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .auth-strip-title {
+      font-size: 0.78rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .auth-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-sm-lime {
+      background: var(--lime);
+      color: var(--lime-text);
+      border: none;
+      border-radius: 9px;
+      padding: 9px 10px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .btn-sm-dark {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 10px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- TOP HEADER -->
     <header class="topbar">
       <div class="brand" onclick="showExploreView()">
         <div class="brand-icon">⚡</div>
@@ -359,7 +406,28 @@
       </div>
     </header>
 
-    <!-- WALLET QUICK BAR -->
+    <!-- DIRECT ON-PAGE EMAIL & PASSWORD SIGN IN / SIGN UP BOX -->
+    <section class="auth-strip" id="inlineAuthBox">
+      <div class="auth-strip-title">
+        <span id="inlineAuthStatus">🔐 Account Sign In / Sign Up</span>
+        <span id="inlineUserBadge" style="font-size:0.68rem; color:var(--lime);">Signed out</span>
+      </div>
+      <div id="inlineAuthInputs">
+        <div class="auth-grid">
+          <input type="email" class="f-inp" id="inlineEmail" placeholder="Email address" />
+          <input type="password" class="f-inp" id="inlinePass" placeholder="Password (6+ chars)" />
+        </div>
+        <div class="auth-actions">
+          <button class="btn-sm-lime" onclick="inlineSignIn()">Sign In</button>
+          <button class="btn-sm-dark" onclick="inlineSignUp()">Create Account</button>
+        </div>
+      </div>
+      <div id="inlineSignedInBar" class="hidden" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span id="inlineSignedEmail" style="font-size:0.74rem; color:var(--text);"></span>
+        <button class="btn-sm-dark" onclick="logoutUser()">Log Out</button>
+      </div>
+    </section>
+
     <div class="wallet-bar">
       <div class="wb-top">
         <div class="curr-tabs">
@@ -380,7 +448,6 @@
       </div>
     </div>
 
-    <!-- VIEW 1: EXPLORE / DISCOVERY -->
     <main id="exploreView">
       <section class="hero">
         <div class="kicker">THE NEXT BIG THING STARTS HERE</div>
@@ -415,14 +482,12 @@
       </section>
     </main>
 
-    <!-- VIEW 2: TOKEN TRADE SCREEN (Chart + Recent Trades + Buy/Sell + Position + Curve + Holders) -->
     <main id="tradeView" class="hidden">
       <div class="sim-banner">
         <span><strong>Naira UI · ETH Curve</strong> — Prices shown in ₦, backed by ETH math.</span>
         <button class="copy-tag" onclick="showExploreView()">← Back</button>
       </div>
 
-      <!-- LIVE PRICE CHART CARD (from screenshot 168183) -->
       <div class="chart-card">
         <div class="chart-top-lbl">
           <span>Token price <span class="live-dot">• LIVE CURVE</span></span>
@@ -448,7 +513,6 @@
         </div>
       </div>
 
-      <!-- BUY / SELL TRADE CARD (from screenshots 168180, 168181, 168182) -->
       <div class="trade-card">
         <div class="trade-head">
           <h2 id="tradeTitle">Trade TOKEN</h2>
@@ -507,7 +571,6 @@
 
         <button class="btn-lime-big" id="btnExecuteTrade" onclick="executeTrade()">Buy TOKEN</button>
 
-        <!-- POSITION & PnL CARD (from screenshot 168182) -->
         <div class="pos-box">
           <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:0.7rem; color:var(--muted);">Your position</span><span class="pnl-pill pnl-pos" id="posGainPct">0.0%</span></div>
           <div style="font-size:0.96rem; font-weight:800; margin-top:2px;" id="userTokenPos">0 TOKEN</div>
@@ -528,10 +591,6 @@
         </div>
       </div>
 
-      
-
-
-      <!-- COIN INTERNAL WALLET ADDRESS CARD -->
       <div class="curve-box" id="coinVaultPublicCard">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <strong style="font-size:0.8rem;">🪙 Coin Internal Wallet</strong>
@@ -546,7 +605,6 @@
         </div>
       </div>
 
-      <!-- BONDING CURVE PROGRESS CARD (from screenshot 168182) -->
       <div class="curve-box">
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:700;">
           <span>🚀 Bonding curve</span>
@@ -565,7 +623,6 @@
         </div>
       </div>
 
-      <!-- TOP HOLDERS CARD (from screenshot 168182) -->
       <div class="holders-card">
         <div style="font-size:0.8rem; font-weight:800;">👥 Top Holders</div>
         <div id="topHoldersList"></div>
@@ -575,7 +632,6 @@
         </div>
       </div>
 
-      <!-- RECENT TRADES CARD (from screenshot 168183) -->
       <div class="recent-trades-card">
         <div style="font-size:0.8rem; font-weight:800; margin-bottom:6px;">Recent Trades</div>
         <div id="recentTradesList">
@@ -584,14 +640,12 @@
       </div>
     </main>
 
-    <!-- FOOTER -->
     <footer class="footer">
       <span>naija.launch · Explore. Launch.</span>
       <span>Naira UI · ETH Curve · 5% platform fee</span>
     </footer>
   </div>
 
-  <!-- SIDE MENU DRAWER (from screenshots 168186 & 168184) -->
   <div class="drawer-backdrop" id="drawerBg" onclick="if(event.target===this) closeDrawer()">
     <aside class="drawer">
       <div>
@@ -660,11 +714,10 @@
     </aside>
   </div>
 
-  <!-- MODAL: EMAIL + PASSWORD SIGN IN / SIGN UP -->
   <div class="modal-bg" id="authModal">
     <div class="modal-card">
       <div class="m-head">
-        <h3>Email & Password Sign In / Sign Up</h3>
+        <h3>Email &amp; Password Sign In / Sign Up</h3>
         <button class="x-btn" onclick="closeModal('authModal')">✕</button>
       </div>
       <label class="f-lbl">Email</label>
@@ -672,11 +725,10 @@
       <label class="f-lbl">Password</label>
       <input type="password" class="f-inp" id="authPass" placeholder="At least 6 characters" />
       <button class="btn-lime-big" onclick="loginUser()">Sign In</button>
-      <button class="btn-dark-big" onclick="signupUser()">Sign Up & Generate ETH Wallet</button>
+      <button class="btn-dark-big" onclick="signupUser()">Sign Up &amp; Generate ETH Wallet</button>
     </div>
   </div>
 
-  <!-- MODAL: DEPOSIT NGN -> ETH -->
   <div class="modal-bg" id="depositModal">
     <div class="modal-card">
       <div class="m-head">
@@ -714,7 +766,6 @@
     </div>
   </div>
 
-  <!-- MODAL: WITHDRAW ETH -->
   <div class="modal-bg" id="withdrawModal">
     <div class="modal-card">
       <div class="m-head">
@@ -733,7 +784,6 @@
     </div>
   </div>
 
-  <!-- MODAL: LAUNCH COIN -->
   <div class="modal-bg" id="launchModal">
     <div class="modal-card">
       <div class="m-head">
@@ -750,8 +800,6 @@
     </div>
   </div>
 
-  
-  <!-- MODAL: OWNER VAULT & EMERGENCY REFUND INSPECTOR (PASSWORD LOCKED) -->
   <div class="modal-bg" id="ownerVaultModal">
     <div class="modal-card">
       <div class="m-head">
@@ -782,7 +830,6 @@
     </div>
   </div>
 
-  <!-- MODAL: ADMIN PORTAL -->
   <div class="modal-bg" id="adminModal">
     <div class="modal-card">
       <div class="m-head">
@@ -810,6 +857,7 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import {
       getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -1908,6 +1956,70 @@
       renderOwnerCoinVaults();
     };
 
+  
+
+    window.inlineSignIn = async function() {
+      const email = ($("inlineEmail").value || "").trim();
+      const pass = ($("inlinePass").value || "");
+      if (!email || pass.length < 6) return toast("Enter email & 6+ char password.");
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        toast("Signed in!");
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+
+    window.inlineSignUp = async function() {
+      const email = ($("inlineEmail").value || "").trim();
+      const pass = ($("inlinePass").value || "");
+      if (!email || pass.length < 6) return toast("Enter email & 6+ char password.");
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        const w = ethers.Wallet.createRandom();
+        await setDoc(doc(db, "users", cred.user.uid), {
+          uid: cred.user.uid,
+          email,
+          evmAddress: w.address,
+          evmPrivateKey: w.privateKey,
+          ngnBalance: 2000,
+          isVip: false,
+          holdings: {},
+          avgBuyNgn: {},
+          launchesCount: 0,
+          referralClaimed: false,
+          createdAt: serverTimestamp()
+        });
+        toast("Account created & ETH wallet generated!");
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+
+    const origAuthChange = onAuthStateChanged;
+  </script>
+  <script>
+    // Sync inline auth box visibility whenever auth state updates
+    setInterval(function() {
+      const dIn = document.getElementById("dSignedInBox");
+      const dEmail = document.getElementById("dUserEmail");
+      const inlineInputs = document.getElementById("inlineAuthInputs");
+      const inlineBar = document.getElementById("inlineSignedInBar");
+      const inlineEmailTxt = document.getElementById("inlineSignedEmail");
+      const badge = document.getElementById("inlineUserBadge");
+      if (!dIn || !inlineInputs || !inlineBar) return;
+      const isLoggedIn = !dIn.classList.contains("hidden");
+      if (isLoggedIn) {
+        inlineInputs.classList.add("hidden");
+        inlineBar.classList.remove("hidden");
+        if (inlineEmailTxt && dEmail) inlineEmailTxt.textContent = dEmail.textContent;
+        if (badge) badge.textContent = "Signed in";
+      } else {
+        inlineInputs.classList.remove("hidden");
+        inlineBar.classList.add("hidden");
+        if (badge) badge.textContent = "Signed out";
+      }
+    }, 400);
   </script>
 </body>
 </html>
